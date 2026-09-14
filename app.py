@@ -1,22 +1,22 @@
-from gevent import monkey
-monkey.patch_all()
-
+import os
+from datetime import datetime
 from flask import Flask, request, jsonify, render_template_string
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
-from datetime import datetime
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'my-secret-key'
 
-# ⚠️ আপনার PostgreSQL পাসওয়ার্ড দিন
-DB_USER = 'postgres'
-DB_PASS = '123456'  # <--- আপনার pgAdmin পাসওয়ার্ড
-DB_HOST = 'localhost'
-DB_PORT = '5432'
-DB_NAME = 'esp32reading'
+# --- ডাটাবেজ কনফিগারেশন ---
+# Render-এর Environment Variable থেকে DATABASE_URL নিবে, না পেলে Localhost ব্যবহার করবে
+DEFAULT_DB = 'postgresql://postgres:123456@localhost:5432/esp32reading'
+db_url = os.environ.get('DATABASE_URL', DEFAULT_DB)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = f'postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+# Supabase বা Render-এর URI 'postgres://' দিয়ে শুরু হলে তা 'postgresql://' এ রূপান্তর করে
+if db_url and db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -124,4 +124,6 @@ HTML_DASHBOARD = """
 """
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    # Render-এর দেয়া পোর্ট নিবে, না পেলে ৫০০০ ব্যবহার করবে
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host='0.0.0.0', port=port)
