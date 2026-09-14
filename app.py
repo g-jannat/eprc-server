@@ -8,7 +8,6 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'my-secret-key'
 
 # --- ডাটাবেজ কনফিগারেশন ---
-# Render-এর Environment Variable থেকে DATABASE_URL নিবে, না পেলে Localhost ব্যবহার করবে
 DEFAULT_DB = 'postgresql://postgres:123456@localhost:5432/esp32reading'
 db_url = os.environ.get('DATABASE_URL', DEFAULT_DB)
 
@@ -18,6 +17,16 @@ if db_url and db_url.startswith("postgres://"):
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# ⚠️ Supabase & Render SSL / Timeout Fix Options
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "connect_args": {
+        "sslmode": "require",
+        "connect_timeout": 10
+    },
+    "pool_pre_ping": True,
+    "pool_recycle": 300
+}
 
 db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -36,7 +45,7 @@ class TelemetryData(db.Model):
 with app.app_context():
     db.create_all()
 
-# --- ৫টি প্যারামিটার রিসিভ করার এন্ডপয়েন্ট ---
+# --- ৫টি প্যারামিটার রিসিভ করার এন্ডপয়েন্ট ---
 @app.route('/api/telemetry', methods=['POST'])
 def receive_telemetry():
     data = request.get_json()
@@ -124,6 +133,5 @@ HTML_DASHBOARD = """
 """
 
 if __name__ == '__main__':
-    # Render-এর দেয়া পোর্ট নিবে, না পেলে ৫০০০ ব্যবহার করবে
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host='0.0.0.0', port=port)
