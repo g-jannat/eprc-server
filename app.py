@@ -18,11 +18,12 @@ if db_url and db_url.startswith("postgres://"):
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Supabase SSL & Timeout Fix
+# ⚠️ Supabase IPv4 Pooler (Port 6543) & SSL Fix
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "connect_args": {
         "sslmode": "require",
-        "connect_timeout": 10
+        "connect_timeout": 10,
+        "options": "-c prepare_threshold=0"
     },
     "pool_pre_ping": True,
     "pool_recycle": 300
@@ -41,10 +42,6 @@ class TelemetryData(db.Model):
     power_kw = db.Column(db.Float, nullable=False)     # kW
     energy_kwh = db.Column(db.Float, nullable=False)   # kWh
     timestamp = db.Column(db.DateTime, default=datetime.now)
-
-# Render Startup Lag এড়াতে অটোমেটিক টেবিল তৈরি বন্ধ রাখা হয়েছে
-# with app.app_context():
-#     db.create_all()
 
 # --- ৫টি প্যারামিটার রিসিভ করার এন্ডপয়েন্ট ---
 @app.route('/api/telemetry', methods=['POST'])
